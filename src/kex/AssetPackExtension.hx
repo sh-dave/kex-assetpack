@@ -28,93 +28,99 @@ class LoadedAssets {
 	public function new() {}
 }
 
+@:structInit class AssetPackLoadingResult {
+	public var assets: LoadedAssets;
+	public var failures: Array<AssetError>;
+}
+
 private typedef Status = {
 	loaded: Int,
-	failures: Array<AssetError>,
 	total: Int,
-	done: LoadedAssets -> Void,
-	loadedAssets: LoadedAssets,
+	done: AssetPackLoadingResult -> Void,
 }
 
 class AssetPackExtension {
-	public static function loadAssetPack( a: Class<Assets>, pack: AssetPack, done: LoadedAssets -> Void ) {
+	public static function loadAssetPack( a: Class<Assets>, pack: AssetPack, done: AssetPackLoadingResult -> Void ) {
 		var status = {
 			loaded: 0,
-			failures: [],
 			total: pack.length,
 			done: done,
-			loadedAssets: new LoadedAssets(),
+		}
+
+		var result: AssetPackLoadingResult = {
+			assets: new LoadedAssets(),
+			failures: [],
 		}
 
 		for (a in pack) {
 			switch a {
 				case BlobAsset(url):
-					Assets.loadBlobFromPath(url, blobLoaded.bind(_, url, status), assetFailed.bind(_, status));
+					Assets.loadBlobFromPath(url, blobLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadBlob(name: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadBlobFromPath(path: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 				case ImageAsset(url, readable):
-					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, url, status), assetFailed.bind(_, status));
+					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadImage(name: String, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadImageFromPath(path: String, readable: Bool, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 				case FontAsset(url):
-					Assets.loadFontFromPath(url, fontLoaded.bind(_, url, status), assetFailed.bind(_, status));
+					Assets.loadFontFromPath(url, fontLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadFont(name: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadFontFromPath(path: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 				case SoundAsset(url, uncompress):
-					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, url, status), assetFailed.bind(_, status));
+					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadSound(name: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadSoundFromPath(path: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 				case VideoAsset(url):
-					Assets.loadVideoFromPath(url, videoLoaded.bind(_, url, status), assetFailed.bind(_, status));
+					Assets.loadVideoFromPath(url, videoLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadVideo(name: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadVideoFromPath(path: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 			}
 		}
 	}
 
-	static function blobLoaded( blob: Blob, id: String, status: Status ) {
-		status.loadedAssets.blobs.set(id, blob);
-		updateStatus(1, status);
+	static function blobLoaded( blob: Blob, id: String, status: Status, result: AssetPackLoadingResult ) {
+		result.assets.blobs.set(id, blob);
+		updateStatus(1, status, result);
 	}
 
-	static function imageLoaded( img: Image, id: String, status: Status ) {
-		status.loadedAssets.images.set(id, img);
-		updateStatus(1, status);
+	static function imageLoaded( img: Image, id: String, status: Status, result: AssetPackLoadingResult ) {
+		result.assets.images.set(id, img);
+		updateStatus(1, status, result);
 	}
 
-	static function fontLoaded( fnt: Font, id: String, status: Status ) {
-		status.loadedAssets.fonts.set(id, fnt);
-		updateStatus(1, status);
+	static function fontLoaded( fnt: Font, id: String, status: Status, result: AssetPackLoadingResult ) {
+		result.assets.fonts.set(id, fnt);
+		updateStatus(1, status, result);
 	}
 
 	// TODO (DK) handle uncompress
-	static function soundLoaded( snd: Sound, uncompress, id: String, status: Status ) {
+	static function soundLoaded( snd: Sound, uncompress, id: String, status: Status, result: AssetPackLoadingResult ) {
 		if (uncompress) {
 			trace('TODO (DK) uncompress sound');
 		}
 
-		status.loadedAssets.sounds.set(id, snd);
-		updateStatus(1, status);
+		result.assets.sounds.set(id, snd);
+		updateStatus(1, status, result);
 	}
 
-	static function videoLoaded( vid: Video, id: String, status: Status ) {
-		status.loadedAssets.videos.set(id, vid);
-		updateStatus(1, status);
+	static function videoLoaded( vid: Video, id: String, status: Status, result: AssetPackLoadingResult ) {
+		result.assets.videos.set(id, vid);
+		updateStatus(1, status, result);
 	}
 
-	static function updateStatus( add: Int, status: Status ) {
+	static function updateStatus( add: Int, status: Status, result: AssetPackLoadingResult ) {
 		status.loaded += add;
-		check(status);
+		check(status, result);
 	}
 
-	static function assetFailed( err, status: Status ) {
-		status.failures.push(err);
-		check(status);
+	static function assetFailed( err, status: Status, result: AssetPackLoadingResult ) {
+		result.failures.push(err);
+		check(status, result);
 	}
 
-	static function check( status: Status ) {
-		if (status.loaded + status.failures.length == status.total) {
-			status.done(status.loadedAssets);
+	static function check( status: Status, result: AssetPackLoadingResult ) {
+		if (status.loaded + result.failures.length == status.total) {
+			status.done(result);
 		}
 	}
 }
