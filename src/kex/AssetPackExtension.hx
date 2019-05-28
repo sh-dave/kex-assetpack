@@ -9,11 +9,11 @@ import kha.Sound;
 import kha.Video;
 
 enum Asset {
-	BlobAsset( url: String );
-	ImageAsset( url: String, ?readable: Bool );
-	FontAsset( url: String );
-	SoundAsset( url: String, ?uncompress: Bool );
-	VideoAsset( url: String );
+	BlobAsset( id: String, url: String );
+	ImageAsset( id: String, url: String, ?readable: Bool );
+	FontAsset( id: String, url: String );
+	SoundAsset( id: String, url: String, ?uncompress: Bool );
+	VideoAsset( id: String, url: String );
 }
 
 typedef AssetPack = Array<Asset>;
@@ -54,47 +54,47 @@ class AssetPackExtension {
 
 		for (a in pack) {
 			switch a {
-				case BlobAsset(url):
-					Assets.loadBlobFromPath(url, blobLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
+				case BlobAsset(id, url):
+					Assets.loadBlobFromPath(url, blobLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadBlob(name: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadBlobFromPath(path: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case ImageAsset(url, readable):
-					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
+				case ImageAsset(id, url, readable):
+					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadImage(name: String, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadImageFromPath(path: String, readable: Bool, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case FontAsset(url):
-					Assets.loadFontFromPath(url, fontLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
+				case FontAsset(id, url):
+					Assets.loadFontFromPath(url, fontLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadFont(name: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadFontFromPath(path: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case SoundAsset(url, uncompress):
-					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, url, status, result), assetFailed.bind(_, status, result));
+				case SoundAsset(id, url, uncompress):
+					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, id, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadSound(name: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadSoundFromPath(path: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case VideoAsset(url):
-					Assets.loadVideoFromPath(url, videoLoaded.bind(_, url, status, result), assetFailed.bind(_, status, result));
+				case VideoAsset(id, url):
+					Assets.loadVideoFromPath(url, videoLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
 					// public static function loadVideo(name: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 					// public static function loadVideoFromPath(path: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
 			}
 		}
 	}
 
-	static function blobLoaded( blob: Blob, id: String, status: Status, result: AssetPackLoadingResult ) {
+	static function blobLoaded( blob: Blob, id: String, url: String, status: Status, result: AssetPackLoadingResult ) {
 		result.assets.blobs.set(id, blob);
 		updateStatus(1, status, result);
 	}
 
-	static function imageLoaded( img: Image, id: String, status: Status, result: AssetPackLoadingResult ) {
+	static function imageLoaded( img: Image, id: String, url: String, status: Status, result: AssetPackLoadingResult ) {
 		result.assets.images.set(id, img);
 		updateStatus(1, status, result);
 	}
 
-	static function fontLoaded( fnt: Font, id: String, status: Status, result: AssetPackLoadingResult ) {
+	static function fontLoaded( fnt: Font, id: String, url: String, status: Status, result: AssetPackLoadingResult ) {
 		result.assets.fonts.set(id, fnt);
 		updateStatus(1, status, result);
 	}
 
 	// TODO (DK) handle uncompress
-	static function soundLoaded( snd: Sound, uncompress, id: String, status: Status, result: AssetPackLoadingResult ) {
+	static function soundLoaded( snd: Sound, uncompress, url: String, id: String, status: Status, result: AssetPackLoadingResult ) {
 		if (uncompress) {
 			trace('TODO (DK) uncompress sound');
 		}
@@ -103,7 +103,7 @@ class AssetPackExtension {
 		updateStatus(1, status, result);
 	}
 
-	static function videoLoaded( vid: Video, id: String, status: Status, result: AssetPackLoadingResult ) {
+	static function videoLoaded( vid: Video, url: String, id: String, status: Status, result: AssetPackLoadingResult ) {
 		result.assets.videos.set(id, vid);
 		updateStatus(1, status, result);
 	}
