@@ -9,11 +9,11 @@ import kha.Sound;
 import kha.Video;
 
 enum Asset {
-	BlobAsset( id: String, url: String );
-	ImageAsset( id: String, url: String, ?readable: Bool );
-	FontAsset( id: String, url: String );
-	SoundAsset( id: String, url: String, ?uncompress: Bool );
-	VideoAsset( id: String, url: String );
+	BlobAsset( id: String, url: String, ?required: Bool );
+	ImageAsset( id: String, url: String, ?readable: Bool, ?required: Bool );
+	FontAsset( id: String, url: String, ?required: Bool );
+	SoundAsset( id: String, url: String, ?uncompress: Bool, ?required: Bool );
+	VideoAsset( id: String, url: String, ?required: Bool );
 }
 
 typedef AssetPack = Array<Asset>;
@@ -36,6 +36,7 @@ class LoadedAssets {
 private typedef Status = {
 	loaded: Int,
 	total: Int,
+	missing: Int,
 	done: AssetPackLoadingResult -> Void,
 }
 
@@ -43,6 +44,7 @@ class AssetPackExtension {
 	public static function loadAssetPack( a: Class<Assets>, pack: AssetPack, done: AssetPackLoadingResult -> Void ) {
 		var status = {
 			loaded: 0,
+			missing: 0,
 			total: pack.length,
 			done: done,
 		}
@@ -54,26 +56,16 @@ class AssetPackExtension {
 
 		for (a in pack) {
 			switch a {
-				case BlobAsset(id, url):
-					Assets.loadBlobFromPath(url, blobLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
-					// public static function loadBlob(name: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-					// public static function loadBlobFromPath(path: String, done: Blob -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case ImageAsset(id, url, readable):
-					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
-					// public static function loadImage(name: String, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-					// public static function loadImageFromPath(path: String, readable: Bool, done: Image -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case FontAsset(id, url):
-					Assets.loadFontFromPath(url, fontLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
-					// public static function loadFont(name: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-					// public static function loadFontFromPath(path: String, done: Font -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case SoundAsset(id, url, uncompress):
-					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, id, url, status, result), assetFailed.bind(_, status, result));
-					// public static function loadSound(name: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-					// public static function loadSoundFromPath(path: String, done: Sound -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-				case VideoAsset(id, url):
-					Assets.loadVideoFromPath(url, videoLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result));
-					// public static function loadVideo(name: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
-					// public static function loadVideoFromPath(path: String, done: Video -> Void, ?failed: AssetError -> Void, ?pos: haxe.PosInfos): Void {
+				case BlobAsset(id, url, required):
+					Assets.loadBlobFromPath(url, blobLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result, required));
+				case ImageAsset(id, url, readable, required):
+					Assets.loadImageFromPath(url, readable, imageLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result, required));
+				case FontAsset(id, url, required):
+					Assets.loadFontFromPath(url, fontLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result, required));
+				case SoundAsset(id, url, uncompress, required):
+					Assets.loadSoundFromPath(url, soundLoaded.bind(_, uncompress, id, url, status, result), assetFailed.bind(_, status, result, required));
+				case VideoAsset(id, url, required):
+					Assets.loadVideoFromPath(url, videoLoaded.bind(_, id, url, status, result), assetFailed.bind(_, status, result, required));
 			}
 		}
 	}
@@ -113,13 +105,18 @@ class AssetPackExtension {
 		check(status, result);
 	}
 
-	static function assetFailed( err, status: Status, result: AssetPackLoadingResult ) {
-		result.failures.push(err);
+	static function assetFailed( err, status: Status, result: AssetPackLoadingResult, ?required: Bool ) {
+		if (required) {
+			result.failures.push(err);
+		} else {
+			status.missing += 1;
+		}
+
 		check(status, result);
 	}
 
 	static function check( status: Status, result: AssetPackLoadingResult ) {
-		if (status.loaded + result.failures.length == status.total) {
+		if (status.loaded + result.failures.length + status.missing == status.total) {
 			status.done(result);
 		}
 	}
